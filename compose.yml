@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:15
+    container_name: db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: visits_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+
+  init_db:
+    build:
+      context: .
+      dockerfile: ./app/init_db.Dockerfile
+    container_name: init_db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=visits_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: ./app
+    container_name: app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=visits_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      init_db:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+volumes:
+  db_data:
