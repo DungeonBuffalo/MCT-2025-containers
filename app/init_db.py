@@ -9,7 +9,7 @@ DB_ADMIN_USER = "postgres"
 DB_ADMIN_PASSWORD = "postgres"
 DB_NAME = os.getenv("DB_NAME", "app")
 
-for attempt in range(60):
+for attempt in range(30):
     try:
         conn = psycopg2.connect(
             host=DB_HOST, port=DB_PORT,
