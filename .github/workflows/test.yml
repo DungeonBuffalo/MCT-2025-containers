@@ -39,8 +39,8 @@ jobs:
 
       - name: Wait for application to become ready
         run: |
-          timeout=60
-          while ! curl -fs http://localhost:8000/ping >/dev/null 2>&1; do
+          timeout=5
+          while ! curl -fs http://localhost:5000/ping >/dev/null 2>&1; do
             ((timeout--))
             if [ $timeout -eq 0 ]; then
               echo "App did not start correctly"
@@ -53,14 +53,14 @@ jobs:
 
       - name: Validate API responses
         run: |
-          pong=$(curl -s http://localhost:8000/ping | jq -r .response)
+          pong=$(curl -s http://localhost:5000/ping | jq -r .response)
           if [[ "$pong" != "pong" ]]; then
             echo "Expected pong, got: $pong"
             exit 1
           fi
           echo "/ping returned pong."
 
-          visits=$(curl -s http://localhost:8000/visits | jq -r .visits)
+          visits=$(curl -s http://localhost:5000/visits | jq -r .visits)
           echo "Visits count: $visits"
           if [[ "$visits" -lt 1 ]]; then
             echo "Expected visits >= 1, got $visits"
