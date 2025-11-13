@@ -1,15 +1,17 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15
     container_name: db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: visits_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: app
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U user -d app"]
       interval: 3s
       retries: 5
 
@@ -26,9 +28,9 @@ services:
     environment:
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=visits_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=app
     depends_on:
       db:
         condition: service_healthy
@@ -39,13 +41,13 @@ services:
       context: ./app
     container_name: app
     ports:
-      - "8000:8000"
+      - "5000:8000"
     environment:
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=visits_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=app
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
