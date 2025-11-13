@@ -6,32 +6,26 @@ import os
 
 app = FastAPI()
 
-DB_HOST = os.getenv("DB_HOST", "db")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
-DB_NAME = os.getenv("DB_NAME", "visits_db")
+DB_PARAMS = {
+    "host": os.getenv("DB_HOST", "db"),
+    "port": os.getenv("DB_PORT", "5432"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "postgres"),
+    "dbname": os.getenv("DB_NAME", "app"),
+}
 
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+
 
 def get_db_connection():
-    return psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        dbname=DB_NAME,
-        cursor_factory=RealDictCursor,
-    )
-
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+    return psycopg2.connect(**DB_PARAMS, cursor_factory=RealDictCursor)
 
 
 @app.get("/ping")
 def ping(request: Request):
     client_ip = request.client.host
-
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("INSERT INTO visits (ip) VALUES (%s)", (client_ip,))
@@ -40,24 +34,21 @@ def ping(request: Request):
     conn.close()
 
     redis_client.incr("ping_count")
-
     return {"response": "pong"}
 
 
 @app.get("/visits")
 def visits():
-    cached_value = redis_client.get("ping_count")
-
-    if cached_value is not None:
-        return {"visits": int(cached_value), "source": "cache"}
+    cached = redis_client.get("ping_count")
+    if cached is not None:
+        return {"visits": int(cached), "source": "cache"}
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) AS cnt FROM visits")
-    count = cur.fetchone()["cnt"]
+    cur.execute("SELECT COUNT(*) AS count FROM visits")
+    row = cur.fetchone()["count"]
     cur.close()
     conn.close()
 
-    redis_client.set("ping_count", count)
-
-    return {"visits": count, "source": "db"}
+    redis_client.set("ping_count", row)
+    return {"visits": row, "source": "db"}
