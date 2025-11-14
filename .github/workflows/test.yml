@@ -12,6 +12,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Test DEV mode
+        run: |
+          docker compose -f docker-compose.dev.yml up -d --build
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:5000/ping >/dev/null 2>&1; then
+              break
+            fi
+            echo "waiting for dev app..."
+            sleep 2
+          done
+          val=$(curl -s http://localhost:5000/visits | jq -r .visits)
+          echo "DEV /visits -> $val"
+          if [[ "$val" != "-1" ]]; then
+            echo "expected -1 in DEV mode, got $val"
+            docker compose -f docker-compose.dev.yml logs app
+            exit 1
+          fi
+          docker compose -f docker-compose.dev.yml down -v
+
       - name: Build and start all containers
         run: docker compose up -d --build
 

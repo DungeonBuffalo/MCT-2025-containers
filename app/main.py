@@ -17,6 +17,7 @@ DB_PARAMS = {
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 
 def get_db_connection():
@@ -39,6 +40,8 @@ def ping(request: Request):
 
 @app.get("/visits")
 def visits():
+    if DEV_MODE:
+        return {"visits": -1, "source": "dev"}
     cached = redis_client.get("ping_count")
     if cached is not None:
         return {"visits": int(cached), "source": "cache"}
